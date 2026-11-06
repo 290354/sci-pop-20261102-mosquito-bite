@@ -5,12 +5,12 @@ VOICE = "zh-CN-YunxiNeural"
 GAP = 0.55  # 默认段间留白（秒）
 
 SEQ = [
-    ("cold", 0, 2, 0.8),
-    ("tension", 3, 6, 0.6),
-    ("mech", 7, 11, 0.6),
-    ("evid", 12, 18, 0.5),
-    ("infer", 19, 25, 0.5),
-    ("close", 26, 31, 1.2),
+    ("cold", 0, 4, 0.8),
+    ("tension", 5, 10, 0.6),
+    ("mech", 11, 20, 0.6),
+    ("evid", 21, 30, 0.5),
+    ("infer", 31, 36, 0.5),
+    ("close", 37, 45, 1.2),
 ]
 
 async def synth(text, out):

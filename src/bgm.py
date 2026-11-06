@@ -34,18 +34,13 @@ def note(f, dur, amp, pan=0.0, harm=(1.0, 0.35, 0.16, 0.07), attack=0.9, release
 # D 小调五音：D3 F3 G3 A3 C4 D4 F4 A4
 FREQ = {"D3": 146.83, "F3": 174.61, "G3": 196.00, "A3": 220.00,
         "C4": 261.63, "D4": 293.66, "F4": 349.23, "A4": 440.00, "E4": 329.63}
-CH = [  # (起始, 长度, [音], 基础音量)
-    (0.0, 20.0, ["D3", "A3"], 0.30),
-    (19.0, 24.0, ["F3", "C4"], 0.30),
-    (42.0, 22.0, ["D3", "F3", "A3"], 0.30),
-    (63.0, 22.0, ["G3", "D4"], 0.28),
-    (84.0, 23.0, ["A3", "E4"], 0.30),
-    (106.0, 24.0, ["F3", "C4", "F4"], 0.28),
-    (129.0, 22.0, ["D3", "A3", "D4"], 0.32),
-    (150.0, 22.0, ["G3", "D4"], 0.28),
-    (171.0, 20.0, ["F3", "C4", "A4"], 0.26),
-    (190.0, 21.0, ["D3", "A3", "D4"], 0.32),
-]
+CH = []  # 按 timeline 的六个章节动态铺和声，改文案/改时长都不用回来手改秒数
+PROG = [["D3", "A3"], ["F3", "C4"], ["D3", "F3", "A3"],
+        ["G3", "D4"], ["A3", "E4"], ["F3", "C4", "F4"]]
+_starts = [m["start"] for m in tl[:-1]]
+for _i, _s0 in enumerate(_starts):
+    _end = _starts[_i + 1] if _i + 1 < len(_starts) else TOTAL
+    CH.append((_s0, _end - _s0 + 1.0, PROG[_i % len(PROG)], 0.30))
 for s0, ln, notes, amp in CH:
     i0 = int(s0 * SR)
     for k, nn in enumerate(notes):
@@ -64,16 +59,11 @@ for k in range(int(TOTAL / 2.2)):
     env = np.exp(-tt * 9)
     music[i0:i0 + m] += 0.10 * np.sin(2 * np.pi * 55 * tt) * env
 
-# 空气感：低通噪声 + 缓变
+# 空气感：低通噪声 + 缓变（用滑动平均做低通，比逐样本一阶滤波快两个数量级）
 rng = np.random.default_rng(7)
 noise = rng.standard_normal(n)
-# 简易一阶低通
-b = 0.02
-lp = np.empty(n)
-acc = 0.0
-for i in range(0, n, 1):
-    acc += b * (noise[i] - acc)
-    lp[i] = acc
+kern = np.ones(200) / 200.0
+lp = np.convolve(noise, kern, mode="same")
 music += lp * 0.20 * (0.6 + 0.4 * np.sin(2 * np.pi * 0.03 * t))
 
 # 章节切换处做 1.2 秒留白（压低到近乎无声），突出解说

@@ -286,7 +286,7 @@ def scene_evid(d, t, tl, dur):
     cx, cy = 420, 330
     magnifier(d, cx, cy, 160, t, a * 0.9)
     # 两排错开的齿
-    p = ease(clamp((t - tl[0] - 3) / 8.0))
+    p = ease(clamp((t - tl[0]) / max(1.0, tl[1] * 0.16)))   # 齿列在场景前 16% 内生成完
     n = int(9 * p)
     for k in range(n):
         xx = cx - 130 + k * 32
@@ -294,7 +294,7 @@ def scene_evid(d, t, tl, dur):
         d.line([(xx, yy), (xx + 14, yy + 62)], fill=blend(BG, INK, a * 0.9), width=4)
         d.line([(xx + 16, yy - 6), (xx + 30, yy + 52)], fill=blend(BG, RED, a * 0.65), width=4)
     # 锯动
-    m = seg(t, tl[0] + 12, tl[0] + 22)
+    m = seg(t, tl[0] + tl[1] * 0.22, tl[0] + tl[1] * 0.55)
     if m > 0.01:
         off = math.sin(t * 12) * 10
         d.rounded_rectangle([cx - 140 + off, cy + 80, cx + 150 + off, cy + 96], 8, outline=blend(BG, YEL, m), width=2)
@@ -303,13 +303,13 @@ def scene_evid(d, t, tl, dur):
     sx0, sy0, sx1, sy1 = 700, 150, 1140, 430
     d.rounded_rectangle([sx0, sy0, sx1, sy1], 16, outline=blend(BG, DIM, a * 0.6), width=1)
     d.line([(sx0 + 20, sy0 + 80), (sx1 - 20, sy0 + 80)], fill=blend(BG, (120, 90, 80), a * 0.9), width=10)
-    b = ease(clamp((t - tl[0] - 14) / 10.0))
+    b = ease(clamp((t - tl[0] - tl[1] * 0.45) / max(1.0, tl[1] * 0.30)))
     if b > 0.01:
         rw = 40 + 90 * b; rh = 26 + 54 * b
         d.ellipse([900 - rw, sy0 + 80 - rh, 900 + rw, sy0 + 80 + rh], fill=blend(BG, (150, 46, 44), a * 0.95))
         d.line([(900, sy0 + 10), (900, sy0 + 62)], fill=blend(BG, INK, a), width=4)
-    text_c(d, 920, sy0 + 240, "2–5 微升", F("serifb", 44), YEL, seg(t, tl[0] + 20, tl[1] + 1))
-    text_c(d, 920, sy0 + 296, "约等于 一滴水的 1/20", F("sans", 20), INK, seg(t, tl[0] + 20, tl[1] + 1) * 0.75)
+    text_c(d, 920, sy0 + 240, "2–5 微升", F("serifb", 44), YEL, seg(t, tl[0] + tl[1] * 0.62, tl[1] + 1))
+    text_c(d, 920, sy0 + 296, "约等于 一滴水的 1/20", F("sans", 20), INK, seg(t, tl[0] + tl[1] * 0.62, tl[1] + 1) * 0.75)
 
 def scene_infer(d, t, tl, dur):
     a = seg(t, tl[0], tl[1] + 1)
@@ -382,6 +382,9 @@ def scene_close(d, t, tl, dur):
 SCENES = [scene_cold, scene_tension, scene_mech, scene_evid, scene_infer, scene_close]
 TITLES = {0: None, 1: "一根没有任何刀刃的口器", 2: "口器怎么找到血", 3: "两把错开的锉刀",
           4: "被调慢的警报", 5: "不出声，不等于没发生"}
+# 这六个数字是各场景「动画节拍」的设计时长。场景变长/变短时，把局部时间按 DESIGN/dur
+# 缩放，节拍（齿列生成、热区扩散、波形衰减）就不会提前演完然后干等着。
+DESIGN = [19.64, 26.59, 33.38, 44.61, 40.94, 42.70]
 
 # ---------------- 主渲染 ----------------
 TL = json.load(open(os.path.join(os.path.dirname(__file__), "timeline.json")))
@@ -405,7 +408,8 @@ def render(t):
     m = TL[cur]
     scene = SCENES[cur]
     dur = (TL[cur + 1]["start"] - m["start"])
-    scene(d, t - m["start"], (0, m["dur"]), dur)
+    k = clamp(DESIGN[cur] / dur, 0.45, 1.3) if dur > 0 else 1.0
+    scene(d, (t - m["start"]) * k, (0, m["dur"] * k), dur)
     # 章节标题
     ttl_end = 5.6 if cur != 5 else 25.0
     if TITLES.get(cur) and 0.6 < (t - m["start"]) < ttl_end:

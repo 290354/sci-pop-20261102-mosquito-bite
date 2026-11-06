@@ -1,3 +1,7 @@
 frames/
 __pycache__/
 *.pyc
+*.wav
+audio/_list_*.txt
+audio/_all_parts.txt
+audio/part_*.mp3
